@@ -10,6 +10,7 @@ Options:
   -i IMAGE  Name of the docker image (including tag) to use as package build environment.
   -o DIR    Destination directory to store packages to.
   -d DIR    Directory that contains other deb packages that need to be installed before build.
+  -n        Skip tests execution
 EOF
     exit 1
 }
@@ -28,7 +29,9 @@ function abspath {
 
 [[ $# -eq 0 ]] && usage
 
-while getopts "i:o:d:h" opt; do
+skiptest=false
+
+while getopts "i:o:d:hn" opt; do
     case $opt in
         i)
             image="$OPTARG"
@@ -38,6 +41,9 @@ while getopts "i:o:d:h" opt; do
             ;;
         d)
             depdir="$OPTARG"
+            ;;
+        n)
+            skiptest=true
             ;;
         h)
             usage
@@ -66,6 +72,10 @@ if [[ "$depdir" ]]; then
 fi
 
 docker_args+="-v $(abspath "$srcdir"):/source-ro:ro -v $(abspath "$outdir"):/output -v $(cd $PROG_DIR; pwd)/build-helper.sh:/build-helper.sh:ro "
+
+if [ "$skiptest" = true ]; then
+    docker_args+="-e DEB_BUILD_OPTIONS=nocheck "
+fi
 
 # Pass current UID and GID to container, so that it can change the
 # ownership of output files which are otherwise writen to outdir as
